@@ -59,12 +59,17 @@ def goto_joint_angles(robot: BambooFrankaClient, q: np.ndarray, time: float) -> 
 
 
 def goto_hand_position(rob: BambooFrankaClient, X_WG: np.ndarray, time: float) -> None:
-    q_current = rob.get_joint_positions()
+
+    s_current = rob.get_joint_states()
+    q_current = np.array(s_current["qpos"])
+    X_current = s_current["ee_pose"]
+    print(f"{X_current=}")
     q_next = cc_ik(
         X_WG,     # 4x4 numpy array, base -> flange
         q_current[6],   # redundancy resolution parameter
         q_current     # current joint configuration (7,)
     )
+    print(f"{q_next=}")
     goto_joint_angles(rob, q_next, time)
 
 

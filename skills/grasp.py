@@ -15,7 +15,7 @@ def grasp_at_pixel(robot: BambooFrankaClient, rgbd: np.ndarray, pixel: np.ndarra
     p_WP = None
     p_WP = np.array([0.4, 0.0, 0.3])
     # compute hand position relative to xyz position (assume top-down grasp)
-    grasp_orientation = np.eye(3)
+    grasp_orientation = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
 
     X_WPregrasp = np.eye(4)
     X_WPregrasp[:3, :3] = grasp_orientation
@@ -31,3 +31,8 @@ def grasp_at_pixel(robot: BambooFrankaClient, rgbd: np.ndarray, pixel: np.ndarra
 
     # close fingers
     robot.close_gripper()
+
+
+if __name__ == "__main__":
+    with BambooFrankaClient(server_ip="128.30.224.88") as rob:
+        grasp_at_pixel(rob, None, None)
