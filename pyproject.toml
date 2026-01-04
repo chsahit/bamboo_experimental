@@ -30,8 +30,8 @@ requires-python = ">=3.8"
 dependencies = [
     # Core scientific computing
     "numpy>=1.20.0",
-
     "pyzmq>=22.0.0",
+    "frantik",
 
     # Hardware communication
     "pyserial>=3.4",
