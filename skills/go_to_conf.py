@@ -2,12 +2,17 @@ import logging
 import numpy as np
 import sys
 from pathlib import Path
+import roboticstoolbox as rtb
+from spatialmath import SE3
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from bamboo.bamboo_client import BambooFrankaClient
-from frantik import cc_ik
+
+# Load the robot model from URDF
+URDF_PATH = Path(__file__).parent / "fr3_robotiq_2f_85.urdf"
+robot_model = rtb.Robot.URDF(str(URDF_PATH))
 
 
 def goto_joint_angles(robot: BambooFrankaClient, q: np.ndarray, time: float) -> int:
@@ -64,13 +69,22 @@ def goto_hand_position(rob: BambooFrankaClient, X_WG: np.ndarray, time: float) -
     q_current = np.array(s_current["qpos"])
     X_current = s_current["ee_pose"]
     print(f"{X_current=}")
-    q_next = cc_ik(
-        X_WG,     # 4x4 numpy array, base -> flange
-        q_current[6],   # redundancy resolution parameter
-        q_current     # current joint configuration (7,)
+
+    T_target = SE3(X_WG)
+    solution = robot_model.ik_LM(
+        T_target,
+        q0=q_current[:7],  # Use current arm joint positions as initial guess
+        end="panda_link7",  # Target the flange frame (robot mounting flange)
+        mask=[1, 1, 1, 1, 1, 1]  # Full 6-DOF constraint (x, y, z, roll, pitch, yaw)
     )
-    print(f"{q_next=}")
-    goto_joint_angles(rob, q_next, time)
+
+    if solution[1]:
+        q_next = solution[0]
+        print(f"{q_next=}")
+        goto_joint_angles(rob, q_next, time)
+    else:
+        print(f"IK solution failed: {solution}")
+        raise RuntimeError("Failed to find IK solution")
 
 
 if __name__ == "__main__":
