@@ -66,7 +66,26 @@ def goto_hand_position(rob: BambooFrankaClient, X_WG: np.ndarray, time: float) -
     X_current = s_current["ee_pose"]
     print(f"{X_current=}")
 
-    T_target = SE3(X_WG)
+    # Ensure X_WG is a proper 4x4 float64 contiguous array for SE3
+    X_WG_clean = np.asarray(X_WG, dtype=np.float64, order='C')
+    if X_WG_clean.shape != (4, 4):
+        raise ValueError(f"Expected 4x4 matrix, got shape {X_WG_clean.shape}")
+
+    # Extract rotation and translation for SE3
+    R = X_WG_clean[:3, :3].copy()
+    t = X_WG_clean[:3, 3].copy()
+
+    # Ensure R is a proper rotation matrix (orthonormalize using SVD)
+    U, _, Vt = np.linalg.svd(R)
+    R_clean = U @ Vt
+
+    # Ensure det(R) = +1 (proper rotation, not reflection)
+    if np.linalg.det(R_clean) < 0:
+        Vt[-1, :] *= -1
+        R_clean = U @ Vt
+
+    # Create SE3 object from rotation matrix and translation vector
+    T_target = SE3.Rt(R_clean, t)
     solution = robot_model.ik_LM(
         T_target,
         q0=q_current[:7],  # Use current arm joint positions as initial guess

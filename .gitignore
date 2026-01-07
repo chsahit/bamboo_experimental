@@ -184,3 +184,5 @@ local_config.yaml
 robot_config.yaml
 
 third_party/grpc
+
+*.whl
