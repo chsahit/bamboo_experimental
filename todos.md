@@ -6,3 +6,5 @@
 [ ] delete bamboo stuff
 [ ] add bamboo to pyproject toml
 [ ] document install process
+[ ] document workaround for zed install
+[ ] wrap cameras in a context manager
