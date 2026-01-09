@@ -105,9 +105,9 @@ def get_single_pixel_from_gemini(vlm_query_str: str, pil_image: Image.Image) -> 
 def push_button(
     robot: BambooFrankaClient,
     label: str = "button",
-    z_clearance: float = 0.15,
+    z_clearance: float = 0.20,
     press_depth: float = 0.035,
-    press_duration: float = 0.5,
+    press_duration: float = 1.0,
 ) -> None:
     """Identify a button and push on it.
 
@@ -144,7 +144,7 @@ def push_button(
     Point to the center of the {label} in the image. Return a JSON list with exactly one element like
     [{{"point": [y, x]}}] with coordinates normalized to 0-1000.
     """
-    extrinsics = np.load("perception/zed/base_to_external_camera.npy")
+    extrinsics = np.load("perception/zed/X_WE.npy")
     center_pixel = get_single_pixel_from_gemini(vlm_query_center, pil)
     annotated_rgb_pil = overlay_pixels_on_image(annotated_rgb_pil, [center_pixel], color=(0, 0, 255), radius=3)
     annotated_rgb_pil.save(os.path.join(save_folderpath, f"annotated_rgb_{timestamp}.png"))
@@ -153,9 +153,12 @@ def push_button(
     X_Wsetpoint1 = np.eye(4)
     X_Wsetpoint1[:3, :3] = TOP_DOWN_GRASP_ROT
     X_Wsetpoint1[:3, 3] = center_xyz + np.array([0.0, 0.0, z_clearance])
-    breakpoint()
-
+    print("EXECUTING SKILL, {X_Wsetpoint1=}")
+    robot.close_gripper()
     goto_hand_position(robot, X_Wsetpoint1, 5.0)
+    X_Wsetpoint2 = np.copy(X_Wsetpoint1)
+    X_Wsetpoint2[2, 3] -= press_depth
+    goto_hand_position(robot, X_Wsetpoint2, press_duration)
 
 
 def main():

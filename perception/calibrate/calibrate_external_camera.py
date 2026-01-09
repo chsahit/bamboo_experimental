@@ -8,10 +8,15 @@ Approach:
 4. Compute transform from robot base to external camera
 
 Math:
+W : World Frame (robot base)
+T: Target Frame (charuco board)
+G: Gripper Frame
+C: Wrist Camera Frame
+E: External Camera Frame
 For each board position i:
-  - X_base_to_target[i] = X_base_to_gripper @ X_gripper_to_wrist @ X_wrist_to_target[i]
-  - X_base_to_external @ X_external_to_target[i] = X_base_to_target[i]
-  - Therefore: X_base_to_external = X_base_to_target[i] @ X_target_to_external[i]
+
+  - X_WT = X_WG @ X_GC @ X_CT
+  - X_WE = X_WT @ X_TE 
 
 We compute this for all positions and average to get a robust estimate.
 """
@@ -40,7 +45,7 @@ CHARUCO_BOARD = cv2.aruco.CharucoBoard((14, 9), 0.020, 0.015, ARUCO_DICT)
 detector_params = cv2.aruco.DetectorParameters()
 detector_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
 
-NUM_CORNER_THRESHOLD = 20  # Reduced from 50 for more forgiving detection
+NUM_CORNER_THRESHOLD = 20  
 
 # ============================================================================
 # Helper Functions
@@ -157,20 +162,9 @@ print("  4. Press SPACE to capture when ready, 'q' to finish early")
 print("="*80)
 
 # Load hand-eye calibration for wrist camera
-print("\n\nLoading wrist camera hand-eye calibration...")
-calib_dirs = sorted(glob("calibration_data/calibration_data_*"))
-if not calib_dirs:
-    raise FileNotFoundError("No hand-eye calibration found! Run calibrate_hand_eye_improved.py first")
-
-latest_calib_dir = calib_dirs[-1]
-wrist_extrinsics_path = os.path.join(latest_calib_dir, "gripper_to_camera_extrinsics.npy")
-
-if not os.path.exists(wrist_extrinsics_path):
-    raise FileNotFoundError(f"Wrist camera calibration not found at {wrist_extrinsics_path}")
-
-X_gripper_to_wrist = np.load(wrist_extrinsics_path)
-print(f"Loaded wrist camera calibration from: {wrist_extrinsics_path}")
-print(f"X_gripper_to_wrist:\n{X_gripper_to_wrist}")
+X_GC = np.load("perception/zed/camera_to_gripper_extrinsics.npy")
+print(f"Loaded wrist camera calibration")
+print(f"{X_GC=}")
 
 # Initialize cameras and robot
 print("\nInitializing robot and cameras...")
@@ -186,15 +180,15 @@ external_camera = ZedCamera(serial_number=EXTERNAL_CAMERA_SERIAL)
 external_cam_matrix, external_dist_coeffs = external_camera.get_intrinsics()
 
 # Get robot's current (fixed) pose
-X_base_to_gripper = np.array(client.get_joint_states()['ee_pose'])
+X_WG = np.array(client.get_joint_states()['ee_pose'])
+X_WG = np.array(client.get_joint_states()['ee_pose'])
 
 print(f"\nRobot gripper pose (KEEP FIXED):")
-print(X_base_to_gripper)
+print(X_WG)
 
 # Compute base to wrist camera transform
-X_base_to_wrist = X_base_to_gripper @ X_gripper_to_wrist
-print(f"\nBase to wrist camera transform:")
-print(X_base_to_wrist)
+X_WC = X_WG @ X_GC
+print(f"{X_WC=}")
 
 # Create save directory
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -203,8 +197,8 @@ os.makedirs(save_dir, exist_ok=True)
 print(f"\nSaving data to: {save_dir}")
 
 # Data collection
-all_base_to_target = []  # Target position in base frame (computed from wrist camera)
-all_external_to_target = []  # Target position in external camera frame (detected)
+X_WTs_all = []
+X_TEs_all = []
 sample_idx = 0
 
 print("\n" + "="*80)
@@ -254,18 +248,12 @@ try:
             if wrist_detection and external_detection:
                 # Extract detections
                 R_target2wrist, t_target2wrist = wrist_detection
+                X_CT = transform_to_matrix(R_target2wrist, t_target2wrist)
                 R_target2external, t_target2external = external_detection
+                X_ET = transform_to_matrix(R_target2external, t_target2external)
+                X_WTs_all.append(X_WC @ X_CT)
+                X_TEs_all.append(np.linalg.inv(X_ET))
 
-                # Compute target position in base frame (using wrist camera)
-                R_wrist2target, t_wrist2target = invert_transform(R_target2wrist, t_target2wrist)
-                X_wrist2target = transform_to_matrix(R_wrist2target, t_wrist2target)
-                X_base2target = X_base_to_wrist @ X_wrist2target
-
-                # Store detections
-                all_base_to_target.append(X_base2target)
-
-                X_target2external = transform_to_matrix(R_target2external, t_target2external)
-                all_external_to_target.append(X_target2external)
 
                 # Save images
                 cv2.imwrite(os.path.join(save_dir, f"wrist_{sample_idx:03d}.png"), wrist_image)
@@ -280,41 +268,38 @@ try:
     print("Data collection complete!")
     print("="*80)
 
-    if len(all_base_to_target) < 5:
-        raise RuntimeError(f"Not enough samples: {len(all_base_to_target)} < 5")
+    if len(X_WTs_all) < 5:
+        raise RuntimeError(f"Not enough samples: {len(X_WTs_all)} < 5")
 
     # Compute base to external camera transform for each sample
-    print(f"\nComputing base-to-external transform from {len(all_base_to_target)} samples...")
+    print(f"\nComputing base-to-external transform from {len(X_WTs_all)} samples...")
 
-    all_base_to_external = []
-    for i in range(len(all_base_to_target)):
-        X_base2target = all_base_to_target[i]
-        X_target2external = all_external_to_target[i]
-
-        # X_base2external @ X_external2target = X_base2target
-        # Therefore: X_base2external = X_base2target @ X_target2external
-        X_base2external = X_base2target @ X_target2external
-        all_base_to_external.append(X_base2external)
+    X_WEs_all = []
+    for i in range(len(X_WTs_all)):
+        X_WT = X_WTs_all[i]
+        X_TE = X_TEs_all[i]
+        X_WE = X_WT @ X_TE
+        X_WEs_all.append(X_WE)
 
     # Average all transforms
-    X_base_to_external_avg = average_transforms(all_base_to_external)
+    X_WE_avg = average_transforms(X_WEs_all)
 
     # Compute statistics
-    translations = [T[:3, 3] for T in all_base_to_external]
+    translations = [T[:3, 3] for T in X_WEs_all]
     t_std = np.std(translations, axis=0)
     print(f"\nTranslation std dev: {t_std} (should be < 0.01 for good calibration)")
 
     # Save result
-    result_path = os.path.join(save_dir, "base_to_external_camera.npy")
-    np.save(result_path, X_base_to_external_avg)
+    result_path = os.path.join(save_dir, "X_WE.npy")
+    np.save(result_path, X_WE_avg)
 
     print("\n" + "="*80)
     print("Calibration Complete!")
     print("="*80)
-    print(f"\nBase-to-External Camera Transform:")
-    print(X_base_to_external_avg)
-    print(f"\nTranslation: {X_base_to_external_avg[:3, 3]}")
-    print(f"Rotation (euler XYZ): {R.from_matrix(X_base_to_external_avg[:3, :3]).as_euler('xyz', degrees=True)} degrees")
+    print(f"\n External Camera Transform:")
+    print(X_WE_avg)
+    print(f"\nTranslation: {X_WE_avg[:3, 3]}")
+    print(f"Rotation (euler XYZ): {R.from_matrix(X_WE_avg[:3, :3]).as_euler('xyz', degrees=True)} degrees")
     print(f"\nSaved to: {result_path}")
 
 except KeyboardInterrupt:
