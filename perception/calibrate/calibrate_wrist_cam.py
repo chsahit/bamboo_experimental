@@ -1,4 +1,4 @@
-"""Modified from DROID repo: https://github.com/droid-dataset/droid"""
+"""Modified from tiptop/DROID: https://github.com/NishanthJKumar/tiptop-robot/blob/main/tiptop/scripts/calibrate_wrist_cam.py"""
 
 import logging
 import time
@@ -16,7 +16,6 @@ from perception.zed.zed_cam import ZedCamera
 CHARUCOBOARD_ROWCOUNT = SQUARES_Y = 9
 CHARUCOBOARD_COLCOUNT = SQUARES_X = 14
 CHARUCOBOARD_CHECKER_SIZE = 0.020
-# CHARUCOBOARD_MARKER_SIZE = 0.016
 CHARUCOBOARD_MARKER_SIZE = 0.015
 ARUCO_DICT = aruco.getPredefinedDictionary(aruco.DICT_5X5_100)
 

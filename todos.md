@@ -1,10 +1,13 @@
 # TODOs
 
-[ ] rename to see_panda_plan
-[ ] add logic for pulling from camera
-[ ] add logic for camera calibration
-[ ] delete bamboo stuff
-[ ] add bamboo to pyproject toml
-[ ] document install process
-[ ] document workaround for zed install
-[ ] wrap cameras in a context manager
+- [ ] rename to see_panda_plan
+- [ ] delete bamboo stuff
+- [ ] add bamboo to pyproject toml
+- [ ] document workaround for zed install
+- [ ] wrap cameras in a context manager
+
+
+- [x] add logic for pulling from camera
+- [x] add logic for camera calibration
+- [x] document install process
+

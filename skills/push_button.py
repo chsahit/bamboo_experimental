@@ -13,9 +13,9 @@ import os
 from datetime import datetime
 from bamboo.client import BambooFrankaClient
 from perception.zed.zed_cam import ZedCamera
-from perception.utils import pixel_to_world_xyz
+from perception.utils.transform import pixel_to_world_xyz
 from skills.go_to_conf import goto_hand_position, TOP_DOWN_GRASP_ROT
-from skills.utils.pretrained_model_interface import GoogleGeminiVLM
+from perception.utils.pretrained_model_interface import GoogleGeminiVLM
 
 def overlay_pixels_on_image(
     image: Image.Image,
