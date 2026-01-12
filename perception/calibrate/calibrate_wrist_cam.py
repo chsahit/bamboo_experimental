@@ -482,23 +482,19 @@ def calibrate_wrist_camera(camera_type='zed', serial_number=16779706, server_ip=
         serial_number: Camera serial number (int for ZED, str for RealSense)
         server_ip: Bamboo/Franka server IP address
     """
-    # Import appropriate camera class based on type
     if camera_type == 'zed':
         from perception.zed.zed_cam import ZedCamera
-        # Convert serial to int if it's a string
         serial = int(serial_number) if isinstance(serial_number, str) else serial_number
         cam = ZedCamera(serial_number=serial)
         cam_id = serial
     elif camera_type == 'realsense':
         from perception.realsense.realsense_cam import RealSenseCamera
-        # Convert serial to str if it's an int
         serial = str(serial_number) if isinstance(serial_number, int) else serial_number
         cam = RealSenseCamera(serial_number=serial)
         cam_id = serial
     else:
         raise ValueError(f"Unknown camera type: {camera_type}. Choose 'zed' or 'realsense'.")
 
-    # Set up the camera, robot, and calibrator
     intrinsics, distortion = cam.get_intrinsics()
     # client = BambooFrankaClient(server_ip=server_ip, enable_gripper=False)
     client = BambooFrankaClient(server_ip=server_ip)
@@ -613,7 +609,6 @@ def calibrate_wrist_camera(camera_type='zed', serial_number=16779706, server_ip=
 
 
 def calibrate_wrist_camera_entrypoint():
-    """Entry point with argument parsing."""
     import argparse
 
     parser = argparse.ArgumentParser(description='Calibrate wrist-mounted camera (ZED or RealSense)')
