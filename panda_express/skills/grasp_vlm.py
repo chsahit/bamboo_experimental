@@ -329,15 +329,6 @@ def grasp_with_vlm(
         visualize_m2t2_grasps(pixel_xyz, pcd, pcd_colors, "http://0.0.0.0:8123", num_top_grasps=5)
         input("\nPress Enter to continue with grasp execution...")
 
-    # go to pre-grasp pose
-    print("go to pre-grasp")
-    X_WPregrasp = np.eye(4)
-    X_WPregrasp[:3, :3] = TOP_DOWN_GRASP_ROT
-    X_WPregrasp[:3, 3] = pixel_xyz + np.array([0.0, 0.0, 0.25])
-    goto_hand_position(robot, X_WPregrasp, 5.0)
-
-    # go to grasp pose
-
     if use_m2t2:
         print("querying M2T2 for grasp...")
         m2t2_best_grasp = get_closest_m2t2_grasp(pixel_xyz, pcd, pcd_colors, "http://0.0.0.0:8123")
@@ -347,6 +338,15 @@ def grasp_with_vlm(
         X_WGoal[:3, :3] = TOP_DOWN_GRASP_ROT
         X_WGoal[:3, 3] = pixel_xyz + np.array([0.0, 0.0, 0.15])
     print(f"{X_WGoal=}")
+
+    # go to pre-grasp pose
+    print("go to pre-grasp")
+    X_WPregrasp = np.eye(4)
+    X_WPregrasp[:3, :3] = TOP_DOWN_GRASP_ROT
+    X_WPregrasp[:3, 3] = pixel_xyz + np.array([0.0, 0.0, 0.25])
+    goto_hand_position(robot, X_WPregrasp, 5.0)
+
+    # go to grasp pose
     goto_hand_position(robot, X_WGoal, 3.0)
     robot.close_gripper()
 

@@ -111,7 +111,7 @@ def open_drawer(robot: BambooFrankaClient):
     X_WPregrasp[:3, 3] = pregrasp_xyz
 
 
-    grasp_xyz = pixel_xyz - np.array([0.125, 0.0, 0.0])
+    grasp_xyz = pixel_xyz - np.array([0.16, 0.0, 0.0])
     X_WGrasp = np.eye(4)
     X_WGrasp[:3, :3] = CABINET_GRASPING_ROT
     X_WGrasp[:3, 3] = grasp_xyz
