@@ -25,10 +25,10 @@ import cv2
 import numpy as np
 import os
 from datetime import datetime
-from skills.go_to_conf import goto_hand_position
+from panda_express.skills.go_to_conf import goto_hand_position
 from bamboo.client import BambooFrankaClient
 from scipy.spatial.transform import Rotation as R
-from perception.zed.zed_cam import ZedCamera
+from panda_express.perception.zed.zed_cam import ZedCamera
 from glob import glob
 
 # ============================================================================
@@ -162,7 +162,7 @@ print("  4. Press SPACE to capture when ready, 'q' to finish early")
 print("="*80)
 
 # Load hand-eye calibration for wrist camera
-X_GC = np.load("perception/zed/camera_to_gripper_extrinsics.npy")
+X_GC = np.load("panda_express/perception/zed/camera_to_gripper_extrinsics.npy")
 print(f"Loaded wrist camera calibration")
 print(f"{X_GC=}")
 

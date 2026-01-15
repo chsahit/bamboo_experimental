@@ -96,27 +96,6 @@ def get_closest_m2t2_grasp(gemini_pt: np.ndarray, pcd: np.ndarray, pcd_colors: n
     return best_grasp
 
 
-def _m2t2_to_panda_guess1(m2t2_grasp: np.ndarray) -> np.ndarray:
-    """4x4 transform to take M2T2 grasp poses to the convention expected by the goto skill."""
-    base_to_tcp = np.eye(4)
-    base_to_tcp[2, 3] = 0.06
-
-    # To panda frame with z-up
-    to_panda_frame = np.eye(4)
-    to_panda_frame[:3, :3] = R.from_euler("xyz", np.array([np.pi, 0, -np.pi / 2])).as_matrix() 
-    m2t2_to_panda_frame = base_to_tcp @ to_panda_frame
-    return m2t2_grasp @ m2t2_to_panda_frame
-
-
-def _m2t2_to_panda_guess2(X_grasp: np.ndarray) -> np.ndarray:
-    correction = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]])
-    correction2 = np.array([[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-    finger_adjustment = np.array(
-        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0.1034], [0, 0, 0, 1]]
-    )
-    return X_grasp @ correction @ finger_adjustment @ correction2
-
-
 def m2t2_to_panda(m2t2_grasp: np.ndarray) -> np.ndarray:
     """Convert M2T2 grasp convention to Panda link8 convention.
 
